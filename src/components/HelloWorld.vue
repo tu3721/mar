@@ -49,165 +49,166 @@
   var viewRightElement = '';
   var viewInElement = '';
   var viewOutElement = '';
-export default {
-  name: 'HelloWorld',
-  data () {
-    return {
-      settings: {
-        "mouseViewMode": "drag",
-        "autorotateEnabled": true,
-        "fullscreenButton": true,
-        "viewControlButtons": true
-      },
-    }
-  },
-  created() {
-    this.init();
-  },
-  methods:{
-    init(){
-      let _this = this;
-      this.$nextTick(() => {
-        var viewerElement = document.getElementById('pano');
-        // Create viewer.
-        viewer = new Marzipano.Viewer(viewerElement);
-        // Get stage.
-        stage = viewer.stage();
-        // Create layers and add them into stage.
-        var imageUrl = "/test.jpg";
-        _this.createEditableLayers(stage,imageUrl,function (err, layers) {
-          if (err) {
-            throw err;
-          }
-          stage.addLayer(layers.colorLayer);
-          stage.addLayer(layers.bwLayer);
+  export default {
+    name: 'HelloWorld',
+    data () {
+      return {
+        settings: {
+          "autorotateEnabled": true,
+        },
+      }
+    },
+    created() {
+      this.init();
+    },
+    methods:{
+      init(){
+        let _this = this;
+        this.$nextTick(() => {
+          var viewerElement = document.getElementById('pano');
+          // Create viewer.
+          viewer = new Marzipano.Viewer(viewerElement);
+          // Get stage.
+          stage = viewer.stage();
+          // Create layers and add them into stage.
+          var imageUrl = "/test.jpg";
+          _this.createEditableLayers(stage,imageUrl,function (err, layers) {
+            if (err) {
+              throw err;
+            }
+            stage.addLayer(layers.colorLayer);
+            stage.addLayer(layers.bwLayer);
 
+          })
+
+          //底部导航设置
+          viewUpElement = document.querySelector('#viewUp');
+          viewDownElement = document.querySelector('#viewDown');
+          viewLeftElement = document.querySelector('#viewLeft');
+          viewRightElement = document.querySelector('#viewRight');
+          viewInElement = document.querySelector('#viewIn');
+          viewOutElement = document.querySelector('#viewOut');
+          // Dynamic parameters for controls.
+          var velocity = 0.7;
+          var friction = 3;
+          // Associate view controls with elements.
+          var controls = viewer.controls();
+          controls.registerMethod('upElement',    new Marzipano.ElementPressControlMethod(viewUpElement,     'y', -velocity, friction), true);
+          controls.registerMethod('downElement',  new Marzipano.ElementPressControlMethod(viewDownElement,   'y',  velocity, friction), true);
+          controls.registerMethod('leftElement',  new Marzipano.ElementPressControlMethod(viewLeftElement,   'x', -velocity, friction), true);
+          controls.registerMethod('rightElement', new Marzipano.ElementPressControlMethod(viewRightElement,  'x',  velocity, friction), true);
+          controls.registerMethod('inElement',    new Marzipano.ElementPressControlMethod(viewInElement,  'zoom', -velocity, friction), true);
+          controls.registerMethod('outElement',   new Marzipano.ElementPressControlMethod(viewOutElement, 'zoom',  velocity, friction), true);
+          autorotateToggleElement = document.querySelector('#autorotateToggle');
+          //右上角自动旋转开关
+          if (_this.settings.autorotateEnabled) {
+            autorotateToggleElement.classList.add('enabled');
+          }
+          autorotateToggleElement.addEventListener('click', _this.toggleAutorotate);
         })
 
-        //底部导航设置
-        viewUpElement = document.querySelector('#viewUp');
-        viewDownElement = document.querySelector('#viewDown');
-        viewLeftElement = document.querySelector('#viewLeft');
-        viewRightElement = document.querySelector('#viewRight');
-        viewInElement = document.querySelector('#viewIn');
-        viewOutElement = document.querySelector('#viewOut');
-        // Dynamic parameters for controls.
-        var velocity = 0.7;
-        var friction = 3;
-        // Associate view controls with elements.
-        var controls = viewer.controls();
-        controls.registerMethod('upElement',    new Marzipano.ElementPressControlMethod(viewUpElement,     'y', -velocity, friction), true);
-        controls.registerMethod('downElement',  new Marzipano.ElementPressControlMethod(viewDownElement,   'y',  velocity, friction), true);
-        controls.registerMethod('leftElement',  new Marzipano.ElementPressControlMethod(viewLeftElement,   'x', -velocity, friction), true);
-        controls.registerMethod('rightElement', new Marzipano.ElementPressControlMethod(viewRightElement,  'x',  velocity, friction), true);
-        controls.registerMethod('inElement',    new Marzipano.ElementPressControlMethod(viewInElement,  'zoom', -velocity, friction), true);
-        controls.registerMethod('outElement',   new Marzipano.ElementPressControlMethod(viewOutElement, 'zoom',  velocity, friction), true);
-        autorotateToggleElement = document.querySelector('#autorotateToggle');
-        //右上角自动旋转开关
-        if (_this.settings.autorotateEnabled) {
+      },
+      toggleAutorotate() {
+        if (autorotateToggleElement.classList.contains('enabled')) {
+          autorotateToggleElement.classList.remove('enabled');
+          this.stopAutorotate();
+        } else {
           autorotateToggleElement.classList.add('enabled');
+          this.startAutorotate();
         }
-        autorotateToggleElement.addEventListener('click', _this.toggleAutorotate);
-      })
-
-    },
-    toggleAutorotate() {
-      if (autorotateToggleElement.classList.contains('enabled')) {
-        autorotateToggleElement.classList.remove('enabled');
-        this.stopAutorotate();
-      } else {
-        autorotateToggleElement.classList.add('enabled');
-        this.startAutorotate();
-      }
-    },
-    stopAutorotate() {
-      viewer.stopMovement();
-      viewer.setIdleMovement(Infinity);
-    },
-    startAutorotate() {
-      if (!autorotateToggleElement.classList.contains('enabled')) {
-        return;
-      }
-      viewer.startMovement(autorotate);
-      viewer.setIdleMovement(1000, autorotate);
-    },
-    createEditableLayers(stage, url, done) {
-      let _this = this;
-      this.urlToCanvas(url, function(err, colorCanvas) {
-        if (err) {
-          done(err);
+      },
+      stopAutorotate() {
+        viewer.stopMovement();
+        viewer.setIdleMovement(Infinity);
+      },
+      startAutorotate() {
+        if (!autorotateToggleElement.classList.contains('enabled')) {
           return;
         }
-        // Make a desaturated copy of the canvas.
-        var bwCanvas = _this.desaturateCanvas(colorCanvas);
-        // Create common geometry and view.
-        var geometry = new Marzipano.EquirectGeometry([{ width: colorCanvas.width }]);
-        var limiter = Marzipano.RectilinearView.limit.traditional(colorCanvas.width/4 * 1.5, 100*Math.PI/180);
-        var view = new Marzipano.RectilinearView(null, limiter);
+        viewer.startMovement(autorotate);
+        viewer.setIdleMovement(1000, autorotate);
+      },
+      createEditableLayers(stage, url, done) {
+        let _this = this;
+        this.urlToCanvas(url, function(err, colorCanvas) {
+          if (err) {
+            done(err);
+            return;
+          }
+          // Make a desaturated copy of the canvas.
+          var bwCanvas = _this.desaturateCanvas(colorCanvas);
+          // Create common geometry and view.
+          var geometry = new Marzipano.EquirectGeometry([{ width: colorCanvas.width }]);
+          var limiter = Marzipano.RectilinearView.limit.traditional(colorCanvas.width/4 * 1.5, 100*Math.PI/180);
+          var view = new Marzipano.RectilinearView(null, limiter);
 
-        // Create color layer.
-        var colorAsset = new Marzipano.DynamicAsset(colorCanvas);
-        var colorSource = new Marzipano.SingleAssetSource(colorAsset);
-        var colorTextureStore = new Marzipano.TextureStore(colorSource, stage);
-        var colorLayer = new Marzipano.Layer(colorSource, geometry, view, colorTextureStore);
-        // Create desaturated layer.
-        var bwAsset = new Marzipano.DynamicAsset(bwCanvas);
-        var bwSource = new Marzipano.SingleAssetSource(bwAsset);
-        var bwTextureStore = new Marzipano.TextureStore(bwSource, stage);
-        var bwLayer = new Marzipano.Layer(bwSource, geometry, view, bwTextureStore);
-        var source = new Marzipano.ImageUrlSource(function(tile) {
-          console.log(tile);
-          return { url: url };
+          // Create color layer.
+          var colorAsset = new Marzipano.DynamicAsset(colorCanvas);
+          var colorSource = new Marzipano.SingleAssetSource(colorAsset);
+          var colorTextureStore = new Marzipano.TextureStore(colorSource, stage);
+          var colorLayer = new Marzipano.Layer(colorSource, geometry, view, colorTextureStore);
+          // Create desaturated layer.
+          var bwAsset = new Marzipano.DynamicAsset(bwCanvas);
+          var bwSource = new Marzipano.SingleAssetSource(bwAsset);
+          var bwTextureStore = new Marzipano.TextureStore(bwSource, stage);
+          var bwLayer = new Marzipano.Layer(bwSource, geometry, view, bwTextureStore);
+
+          //设置自动循环的开始scene
+          var source = new Marzipano.ImageUrlSource(function(tile) {
+            console.log(tile);
+            return { url: url };
+          });
+          var scene = viewer.createScene({
+            source: source,
+            geometry: geometry,
+            view: view,
+            pinFirstLevel: true
+          });
+          viewer.switchScene(scene);
+
+          //开始自动循环
+          _this.startAutorotate();
+          done(null, {
+            colorLayer: colorLayer,
+            bwLayer: bwLayer
+          });
         });
-        var scene = viewer.createScene({
-          source: source,
-          geometry: geometry,
-          view: view,
-          pinFirstLevel: true
-        });
-        viewer.switchScene(scene);
-        _this.startAutorotate();
-        done(null, {
-          colorLayer: colorLayer,
-          bwLayer: bwLayer
-        });
-      });
+
+      },
+      urlToCanvas(url, done) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var img = new Image();
+        img.onload = function() {
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+          done(null, canvas);
+        };
+        img.onerror = function(e) {
+          done(e);
+        };
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+      },
+      desaturateCanvas(original) {
+        var canvas = document.createElement('canvas');
+        canvas.width = original.width;
+        canvas.height = original.height;
+        var ctx = canvas.getContext('2d');
+        var imageData = original.getContext('2d').getImageData(0, 0, original.width, original.height);
+        // Marzipano.colorEffects.applyToImageData(imageData, colorEffects.saturation(0));
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
+      },
+
 
     },
-    urlToCanvas(url, done) {
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
-      var img = new Image();
-      img.onload = function() {
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0);
-        done(null, canvas);
-      };
-      img.onerror = function(e) {
-        done(e);
-      };
-      img.crossOrigin = 'anonymous';
-      img.src = url;
-    },
-    desaturateCanvas(original) {
-      var canvas = document.createElement('canvas');
-      canvas.width = original.width;
-      canvas.height = original.height;
-      var ctx = canvas.getContext('2d');
-      var imageData = original.getContext('2d').getImageData(0, 0, original.width, original.height);
-      // Marzipano.colorEffects.applyToImageData(imageData, colorEffects.saturation(0));
-      ctx.putImageData(imageData, 0, 0);
-      return canvas;
-    },
-
-
-  },
 
 
 
 
-}
+  }
 </script>
 
 <style>
