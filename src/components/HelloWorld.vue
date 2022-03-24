@@ -2,38 +2,42 @@
   <div>
     <div>
       <div id="pano"></div>
-      <a href="javascript:void(0)" id="autorotateToggle">
-        <img class="icon off" src="@/assets/img/play.png">
-        <img class="icon on" src="@/assets/img/pause.png">
-      </a>
-      <a href="javascript:void(0)" id="fullscreenToggle">
-        <img class="icon off" src="@/assets/img/fullscreen.png">
-        <img class="icon on" src="@/assets/img/windowed.png">
-      </a>
-      <a href="javascript:void(0)" id="viewUp" class="viewControlButton viewControlButton-1">
-        <img class="icon" src="@/assets/img/up.png">
-      </a>
-      <a href="javascript:void(0)" id="viewDown" class="viewControlButton viewControlButton-2">
-        <img class="icon" src="@/assets/img/down.png">
-      </a>
-      <a href="javascript:void(0)" id="viewLeft" class="viewControlButton viewControlButton-3">
-        <img class="icon" src="@/assets/img/left.png">
-      </a>
-      <a href="javascript:void(0)" id="viewRight" class="viewControlButton viewControlButton-4">
-        <img class="icon" src="@/assets/img/right.png">
-      </a>
-      <a href="javascript:void(0)" id="viewIn" class="viewControlButton viewControlButton-5">
-        <img class="icon" src="@/assets/img/plus.png">
-      </a>
-      <a href="javascript:void(0)" id="viewOut" class="viewControlButton viewControlButton-6">
-        <img class="icon" src="@/assets/img/minus.png">
-      </a>
+      <div v-show="show">
+        <a href="javascript:void(0)" id="autorotateToggle">
+          <img class="icon off" src="@/assets/img/play.png">
+          <img class="icon on" src="@/assets/img/pause.png">
+        </a>
+        <a href="javascript:void(0)" id="fullscreenToggle">
+          <img class="icon off" src="@/assets/img/fullscreen.png">
+          <img class="icon on" src="@/assets/img/windowed.png">
+        </a>
+        <a href="javascript:void(0)" id="viewUp" class="viewControlButton viewControlButton-1">
+          <img class="icon" src="@/assets/img/up.png">
+        </a>
+        <a href="javascript:void(0)" id="viewDown" class="viewControlButton viewControlButton-2">
+          <img class="icon" src="@/assets/img/down.png">
+        </a>
+        <a href="javascript:void(0)" id="viewLeft" class="viewControlButton viewControlButton-3">
+          <img class="icon" src="@/assets/img/left.png">
+        </a>
+        <a href="javascript:void(0)" id="viewRight" class="viewControlButton viewControlButton-4">
+          <img class="icon" src="@/assets/img/right.png">
+        </a>
+        <a href="javascript:void(0)" id="viewIn" class="viewControlButton viewControlButton-5">
+          <img class="icon" src="@/assets/img/plus.png">
+        </a>
+        <a href="javascript:void(0)" id="viewOut" class="viewControlButton viewControlButton-6">
+          <img class="icon" src="@/assets/img/minus.png">
+        </a>
+      </div>
 
     </div>
   </div>
 </template>
 
 <script>
+  import { getImg } from "../router/request";
+  import utils from '../utils/util';
   import * as Marzipano from 'marzipano'
   var viewer = '';
   var autorotateToggleElement = '';
@@ -53,27 +57,69 @@
     name: 'HelloWorld',
     data () {
       return {
+        show:false,
         settings: {
           "autorotateEnabled": true,
         },
       }
     },
     created() {
-      this.init();
+      this.getImgUrl();
+      // this.init('renderingLibraryProd/f2e6f0a7ba3eeb1f2713b30851edd2dd/20211224/RenderingNo1Work_2021_12_24_18_25_5_812.jpg');
     },
     methods:{
-      init(){
+      getImgUrl(){
+        this.$nextTick(() => {
+          console.log(utils);
+          if (this.$route.query.scene_id){
+            let dt = {
+              scene_id:this.$route.query.scene_id
+            }
+            var viewerElement = document.getElementById('pano');
+            var dom = '';
+            getImg(dt).then(res => {
+              console.log(res);
+              if (res.data.ImageTypes == 0){
+                //平面图
+                dom=document.createElement('img');
+                // let url = 'https://mx-renderinglibrary.oss-cn-hangzhou.aliyuncs.com/';
+                dom.src = res.data.url + res.data.path;
+                dom.style.width = '100%';
+                dom.style.height = '100%';
+                viewerElement.appendChild(dom);
+              }else if (res.data.ImageTypes == 1){
+                //全景图
+                this.init(res.data.path,res.data.url);
+              }else{
+                dom=document.createElement('p');
+                dom.innerHTML='图片类型错误';
+                viewerElement.appendChild(dom);
+              }
+            })
+          }
+        })
+      },
+      init(path,url){
         let _this = this;
         this.$nextTick(() => {
+          // let url = process.env.NODE_ENV == 'production' ? 'https://mx-renderinglibrary.oss-cn-hangzhou.aliyuncs.com/' : '/img';
+          var imageUrl = url + path;
+          // console.log(image);
+          this.show = true;
+
+          // var imageUrl = '/test.jpg';
           var viewerElement = document.getElementById('pano');
           // Create viewer.
           viewer = new Marzipano.Viewer(viewerElement);
           // Get stage.
           stage = viewer.stage();
           // Create layers and add them into stage.
-          var imageUrl = "/test.jpg";
+          // var imageUrl = "/test.jpg";
           _this.createEditableLayers(stage,imageUrl,function (err, layers) {
             if (err) {
+              var dom=document.createElement('p');
+              dom.innerHTML='图片加载失败';
+              viewerElement.appendChild(dom);
               throw err;
             }
             stage.addLayer(layers.colorLayer);
